@@ -37,6 +37,10 @@ from .conversable_agent import ConversableAgent
 
 logger = logging.getLogger(__name__)
 
+SELECT_SPEAKER_PROMPT_TEMPLATE = (
+    "Read the above conversation. Then select the next role from {agentlist} to play. Only return the role."
+)
+
 
 @dataclass
 @export_module("autogen")
@@ -139,9 +143,7 @@ class GroupChat:
                 {roles}.
                 Read the following conversation.
                 Then select the next role from {agentlist} to play. Only return the role."""
-    select_speaker_prompt_template: str = (
-        "Read the above conversation. Then select the next role from {agentlist} to play. Only return the role."
-    )
+    select_speaker_prompt_template: str = SELECT_SPEAKER_PROMPT_TEMPLATE
     select_speaker_auto_multiple_template: str = """You provided more than one name in your text, please return just the name of the next speaker. To determine the speaker use these prioritised rules:
     1. If the context refers to themselves as a speaker e.g. "As the..." , choose that speaker's name
     2. If it refers to the "next" speaker name, choose that name
@@ -380,7 +382,7 @@ class GroupChat:
 
         agentlist = f"{[agent.name for agent in agents]}"
 
-        return_prompt = self.select_speaker_prompt_template.format(agentlist=agentlist)
+        return_prompt = f"{self.select_speaker_prompt_template}".replace("{agentlist}", agentlist)
         return return_prompt
 
     def introductions_msg(self, agents: Optional[list[Agent]] = None) -> str:
@@ -909,12 +911,10 @@ class GroupChat:
                 }
             else:
                 # Final failure, no attempts left
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": f"[AGENT SELECTION FAILED]Select speaker attempt #{attempt} of {attempt + attempts_left} failed as it returned multiple names.",
-                    }
-                )
+                messages.append({
+                    "role": "user",
+                    "content": f"[AGENT SELECTION FAILED]Select speaker attempt #{attempt} of {attempt + attempts_left} failed as it returned multiple names.",
+                })
 
         else:
             # No names at all on requery so add additional reminder prompt for next retry
@@ -930,12 +930,10 @@ class GroupChat:
                 }
             else:
                 # Final failure, no attempts left
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": f"[AGENT SELECTION FAILED]Select speaker attempt #{attempt} of {attempt + attempts_left} failed as it did not include any agent names.",
-                    }
-                )
+                messages.append({
+                    "role": "user",
+                    "content": f"[AGENT SELECTION FAILED]Select speaker attempt #{attempt} of {attempt + attempts_left} failed as it did not include any agent names.",
+                })
 
         return True, None
 
